@@ -266,7 +266,7 @@ def process_file(options, argv):
         print("Error compiling")
         print("".join(open(stderr).readlines()))
         # If the compiler crashed fail the test
-        if 'Compiler Bug' in open(stderr).readlines():
+        if 'Compiler Bug' in open(stderr).read():
             return FAILURE
 
     expected_error = isError(options.p4filename)
