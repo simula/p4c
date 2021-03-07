@@ -264,7 +264,7 @@ def process_file(options, argv):
 
     if result != SUCCESS:
         print("Error compiling")
-        print("".join(open(stderr).readlines()))
+        print(open(stderr).read())
         # If the compiler crashed fail the test
         if 'Compiler Bug' in open(stderr).read():
             return FAILURE
