@@ -261,7 +261,7 @@ class JSONLoader {
         if (node) {
             v = *(node->to<T>());
         } else {
-            v = nullptr;
+            // FIXME: What to do here?
         }
     }
     template<typename T> typename std::enable_if<std::is_base_of<IR::INode, T>::value>::type
@@ -270,7 +270,7 @@ class JSONLoader {
         if (node) {
             v = node->to<T>();
         } else {
-            v = nullptr;
+            // FIXME: What to do here?
         }
     }
     template<typename T, size_t N>
