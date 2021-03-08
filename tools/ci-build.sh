@@ -117,11 +117,19 @@ function build() {
   mkdir -p build
   cd build
 
-  cmake .. -DCMAKE_CXX_FLAGS:STRING=-O3 -DCMAKE_BUILD_TYPE=RELEASE "$@"
+  cmake .. "$@"
   make
 }
 
-build "-DENABLE_UNIFIED_COMPILATION=${ENABLE_UNIFIED_COMPILATION}"
+# Toggle unified compilation.
+CMAKE_FLAGS="-DENABLE_UNIFIED_COMPILATION=${ENABLE_UNIFIED_COMPILATION} "
+# Strong optimization.
+CMAKE_FLAGS+="-DCMAKE_CXX_FLAGS:STRING=-O3 "
+# Catch null pointer dereferencing.
+CMAKE_FLAGS+="-DCMAKE_CXX_FLAGS:STRING=-fsanitize=null "
+# RELEASE should be default, but we want to make sure.
+CMAKE_FLAGS+="-DCMAKE_BUILD_TYPE=RELEASE "
+build ${CMAKE_FLAGS}
 
 make install
 /usr/local/bin/ccache -p -s
