@@ -118,21 +118,21 @@ function build() {
   mkdir -p build
   cd build
 
-  cmake .. "$@"
+  cmake "$@" ..
   make
 }
 
-# Toggle unified compilation.
-CMAKE_FLAGS="-DENABLE_UNIFIED_COMPILATION=${ENABLE_UNIFIED_COMPILATION} "
-# Need to prematurely link gold to allow sanitization in Ubuntu 16.04
-# Context: https://stackoverflow.com/a/50357910
-CMAKE_FLAGS+="-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold "
 # Strong optimization.
-CMAKE_FLAGS+="-DCMAKE_CXX_FLAGS:STRING=-O3 "
+export CXXFLAGS="${CXXFLAGS} -O3"
+# Add the gold linker early to allow sanitization in Ubuntu 16.04
+# Context: https://stackoverflow.com/a/50357910
+export CXXFLAGS="${CXXFLAGS} -fuse-ld=gold"
 # Catch null pointer dereferencing.
-CMAKE_FLAGS+="-DCMAKE_CXX_FLAGS:STRING=-fsanitize=null "
+export CXXFLAGS="${CXXFLAGS} -fsanitize=null"
+# Toggle unified compilation.
+CMAKE_FLAGS+="-DENABLE_UNIFIED_COMPILATION=${ENABLE_UNIFIED_COMPILATION} "
 # RELEASE should be default, but we want to make sure.
-CMAKE_FLAGS+="-DCMAKE_BUILD_TYPE=RELEASE "
+CMAKE_FLAGS+="-DCMAKE_BUILD_TYPE=RELEASE"
 build ${CMAKE_FLAGS}
 
 make install
