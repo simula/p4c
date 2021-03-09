@@ -256,23 +256,10 @@ class JSONLoader {
     unpack_json(T &v) { v = T::fromJSON(*this); }
 
     template<typename T> typename std::enable_if<std::is_base_of<IR::INode, T>::value>::type
-    unpack_json(T &v) {
-        auto node = get_node();
-        if (node) {
-            v = *(node->to<T>());
-        } else {
-            // FIXME: What to do here?
-        }
-    }
+    unpack_json(T &v) { v = *(get_node()->to<T>()); }
     template<typename T> typename std::enable_if<std::is_base_of<IR::INode, T>::value>::type
-    unpack_json(const T *&v) {
-        auto node = get_node();
-        if (node) {
-            v = node->to<T>();
-        } else {
-            // FIXME: What to do here?
-        }
-    }
+    unpack_json(const T *&v) { v = get_node()->to<T>(); }
+
     template<typename T, size_t N>
     void unpack_json(T (&v)[N]) {
         if (auto *j = json->to<JsonVector>()) {
