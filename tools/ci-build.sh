@@ -130,7 +130,7 @@ CMAKE_FLAGS+="-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold "
 # Strong optimization.
 CMAKE_FLAGS+="-DCMAKE_CXX_FLAGS:STRING=-O3 "
 # Catch null pointer dereferencing.
-CMAKE_FLAGS+="-D CMAKE_CXX_FLAGS=-fsanitize=null "
+CMAKE_FLAGS+="-DCMAKE_CXX_FLAGS:STRING=-fsanitize=null "
 # RELEASE should be default, but we want to make sure.
 CMAKE_FLAGS+="-DCMAKE_BUILD_TYPE=RELEASE "
 build ${CMAKE_FLAGS}
