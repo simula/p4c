@@ -32,7 +32,7 @@ sed "s#set (P4C_SEM_VERSION_STRING \".*\")#set (P4C_SEM_VERSION_STRING \"${PACKA
 
 # ------ Create debian/changelog --------------------------------------------
 (
-   echo "p4lang-p4c (${UPSTREAM_VERSION}+${GIT_ID}-1ppa1) unstable; urgency=medium"
+   echo "p4c (${UPSTREAM_VERSION}+${GIT_ID}-1ppa1) unstable; urgency=medium"
    echo ""
    echo "  * Self-made package"
    echo ""
