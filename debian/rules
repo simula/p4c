@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+
+DH_VERBOSE = 1
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	#cd $(CURDIR)/test/frameworks/gtest/tmp && mv ./* ../ && cd ../ && rm -rf $(CURDIR)/test/frameworks/gtest/tmp 
+	#cd $(CURDIR)/control-plane/p4runtime/tmp/ && mv ./* ../ && cd ../ && rm -rf $(CURDIR)/control-plane/p4runtime/tmp
+	dh_auto_configure -- -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_INSTALL_PREFIX=/usr 
+
+override_dh_auto_install:
+	dh_auto_install -- DESTDIR=$(CURDIR)/ install
+
