@@ -20,7 +20,7 @@ if(CCACHE_PROGRAM)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
 endif()
 
-project (p4c)
+project (P4C)
 
 set (CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 set (P4C_RUNTIME_OUTPUT_DIRECTORY bin)
@@ -57,7 +57,7 @@ if (NOT $ENV{P4C_VERSION} STREQUAL "")
 else()
   # Semantic version numbering: <major>.<minor>.<patch>[-rcX]
   # Examples: 0.5.1, 1.0.0-rc1, 1.0.1-alpha
-  set (P4C_SEM_VERSION_STRING "1.2.0+git20210311114006~91eeef93")
+  set (P4C_SEM_VERSION_STRING "1.2.0+git20210311211745~91eeef93")
   string (REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)([-0-9a-z\\.]*).*"
     __p4c_version ${P4C_SEM_VERSION_STRING})
   set (P4C_VERSION_MAJOR ${CMAKE_MATCH_1})
@@ -444,7 +444,7 @@ endif()
 # Packaging:
 SET(CPACK_SOURCE_GENERATOR "TXZ")
 SET(CPACK_SOURCE_PACKAGE_FILE_NAME
-   "${CMAKE_PROJECT_NAME}-${P4C_SEM_VERSION_STRING}")
+   "p4c-${P4C_SEM_VERSION_STRING}")
 SET(CPACK_SOURCE_IGNORE_FILES
    "${PROJECT_SOURCE_DIR}/${CMAKE_PROJECT_NAME}-*;${PROJECT_SOURCE_DIR}/${CMAKE_PROJECT_NAME}_*;/build/;/.git/;/config.log;/CMakeFiles/;CMakeCache.txt$;.cmake$;.tar.gz$;/_CPack_Packages;/Makefile$;~$;/build-deb;/clean-deb;/filter-empty-entries;/make-symbols;/make-ppa;/make-deb;/debian.conf;/make-rpm;/rpm.conf;${CPACK_SOURCE_IGNORE_FILES}")
 INCLUDE(CPack)
