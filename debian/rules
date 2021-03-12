@@ -13,3 +13,6 @@ override_dh_auto_configure:
 override_dh_auto_install:
 	dh_auto_install -- DESTDIR=$(CURDIR)/ install
 
+# dwz reports: elf_update failed
+override_dh_dwz:
+	dh_dwz -Xp4c-bm2-psa -Xp4c-bm2-ss -Xp4c-dpdk -Xp4c-ebpf -Xp4c-graphs -Xp4c-ubpf -X p4test
