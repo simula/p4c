@@ -48,7 +48,7 @@ Vcs-Git: https://github.com/simula/p4c
 Vcs-Browser: https://github.com/simula/p4c/tree/p4-packaging
 
 Package: p4lang-p4c
-Architecture: any
+Architecture: amd64 arm64
 Depends: clang,
          cpp,
          iproute2,
