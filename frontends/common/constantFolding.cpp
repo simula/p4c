@@ -195,6 +195,43 @@ const IR::Node* DoConstantFolding::preorder(IR::ArrayIndex* e) {
     visit(e->right);
     assignmentTarget = save;
     prune();
+
+    if (!typesKnown)
+        return e;
+    auto orig = getOriginal<IR::ArrayIndex>();
+    auto type = typeMap->getType(orig->left, true);
+    if (type->is<IR::Type_Tuple>()) {
+        auto init = getConstant(e->right);
+        if (init == nullptr) {
+            if (typesKnown)
+                ::error(ErrorType::ERR_INVALID,
+                        "%1%: Index must evaluate to a constant", e->right);
+            return e;
+        }
+        if (auto cst = init->to<IR::Constant>()) {
+            if (!cst->fitsInt()) {
+                ::error(ErrorType::ERR_INVALID, "Index too large: %1%", cst);
+                return e;
+            }
+            int index = cst->asInt();
+            if (index < 0) {
+                ::error(ErrorType::ERR_INVALID,
+                        "Tuple index %1% must be constant", e->right);
+                return e;
+            }
+            auto value = getConstant(e->left);
+            if (!value)
+                return e;
+            if (auto list = value->to<IR::ListExpression>()) {
+                if (static_cast<size_t>(index) >= list->size()) {
+                    ::error(ErrorType::ERR_INVALID,
+                            "Tuple index %1% out of bounds", e->right);
+                    return e;
+                }
+                return CloneConstants::clone(list->components.at(static_cast<size_t>(index)));
+            }
+        }
+    }
     return e;
 }
 
@@ -601,41 +638,32 @@ const IR::Node* DoConstantFolding::postorder(IR::Member* e) {
         if (expr == nullptr)
             return e;
 
-        if (auto tt = type->to<IR::Type_Tuple>()) {
-            int index = tt->fieldNameValid(e->member);
-            if (index < 0)
-                return e;
-            if (auto list = expr->to<IR::ListExpression>()) {
-                result = CloneConstants::clone(list->components.at(static_cast<size_t>(index)));
-            }
-        } else {
-            auto structType = type->to<IR::Type_StructLike>();
-            if (structType == nullptr)
-                BUG("Expected a struct type, got %1%", type);
-            if (auto list = expr->to<IR::ListExpression>()) {
-                bool found = false;
-                int index = 0;
-                for (auto f : structType->fields) {
-                    if (f->name.name == e->member.name) {
-                        found = true;
-                        break;
-                    }
-                    index++;
+        auto structType = type->to<IR::Type_StructLike>();
+        if (structType == nullptr)
+            BUG("Expected a struct type, got %1%", type);
+        if (auto list = expr->to<IR::ListExpression>()) {
+            bool found = false;
+            int index = 0;
+            for (auto f : structType->fields) {
+                if (f->name.name == e->member.name) {
+                    found = true;
+                    break;
                 }
-
-                if (!found)
-                    BUG("Could not find field %1% in type %2%", e->member, type);
-                result = CloneConstants::clone(list->components.at(index));
-            } else if (auto si = expr->to<IR::StructExpression>()) {
-                if (origtype->is<IR::Type_Header>() && e->member.name == IR::Type_Header::isValid)
-                    return e;
-                auto ne = si->components.getDeclaration<IR::NamedExpression>(e->member.name);
-                BUG_CHECK(ne != nullptr,
-                          "Could not find field %1% in initializer %2%", e->member, si);
-                return CloneConstants::clone(ne->expression);
-            } else {
-                BUG("Unexpected initializer: %1%", expr);
+                index++;
             }
+
+            if (!found)
+                    BUG("Could not find field %1% in type %2%", e->member, type);
+            result = CloneConstants::clone(list->components.at(index));
+        } else if (auto si = expr->to<IR::StructExpression>()) {
+            if (origtype->is<IR::Type_Header>() && e->member.name == IR::Type_Header::isValid)
+                return e;
+            auto ne = si->components.getDeclaration<IR::NamedExpression>(e->member.name);
+            BUG_CHECK(ne != nullptr,
+                      "Could not find field %1% in initializer %2%", e->member, si);
+                return CloneConstants::clone(ne->expression);
+        } else {
+            BUG("Unexpected initializer: %1%", expr);
         }
     }
     return result;
@@ -816,10 +844,8 @@ DoConstantFolding::Result
 DoConstantFolding::setContains(const IR::Expression* keySet, const IR::Expression* select) const {
     if (keySet->is<IR::DefaultExpression>())
         return Result::Yes;
-    if (select->is<IR::ListExpression>()) {
-        auto list = select->to<IR::ListExpression>();
-        if (keySet->is<IR::ListExpression>()) {
-            auto klist = keySet->to<IR::ListExpression>();
+    if (auto list = select->to<IR::ListExpression>()) {
+        if (auto klist = keySet->to<IR::ListExpression>()) {
             BUG_CHECK(list->components.size() == klist->components.size(),
                       "%1% and %2% size mismatch", list, klist);
             for (unsigned i=0; i < list->components.size(); i++) {
@@ -844,14 +870,26 @@ DoConstantFolding::setContains(const IR::Expression* keySet, const IR::Expressio
         return Result::No;
     }
 
-    BUG_CHECK(select->is<IR::Constant>(), "%1%: expected a constant", select);
-    auto cst = select->to<IR::Constant>();
-    if (keySet->is<IR::Constant>()) {
-        if (keySet->to<IR::Constant>()->value == cst->value)
+    if (select->is<IR::Member>()) {
+        // This must be an enum value
+        auto key = getConstant(keySet);
+        if (key == nullptr)
+            ::error(ErrorType::ERR_TYPE_ERROR, "%1%: expression must evaluate to a constant", key);
+        auto sel = getConstant(select);
+        // For Enum and SerEnum instances we can just use expression equivalence.
+        // This assumes that type checking does not allow us to compare constants to SerEnums.
+        if (key->equiv(*sel))
             return Result::Yes;
         return Result::No;
-    } else if (keySet->is<IR::Range>()) {
-        auto range = keySet->to<IR::Range>();
+    }
+
+    BUG_CHECK(select->is<IR::Constant>(), "%1%: expected a constant", select);
+    auto cst = select->to<IR::Constant>();
+    if (auto kc = keySet->to<IR::Constant>()) {
+        if (kc->value == cst->value)
+            return Result::Yes;
+        return Result::No;
+    } else if (auto range = keySet->to<IR::Range>()) {
         auto left = getConstant(range->left);
         if (left == nullptr) {
             ::error(ErrorType::ERR_INVALID, "%1%: expression must evaluate to a constant", left);
@@ -866,15 +904,14 @@ DoConstantFolding::setContains(const IR::Expression* keySet, const IR::Expressio
             right->to<IR::Constant>()->value >= cst->value)
             return Result::Yes;
         return Result::No;
-    } else if (keySet->is<IR::Mask>()) {
+    } else if (auto mask = keySet->to<IR::Mask>()) {
         // check if left & right == cst & right
-        auto range = keySet->to<IR::Mask>();
-        auto left = getConstant(range->left);
+        auto left = getConstant(mask->left);
         if (left == nullptr) {
             ::error(ErrorType::ERR_INVALID, "%1%: expression must evaluate to a constant", left);
             return Result::DontKnow;
         }
-        auto right = getConstant(range->right);
+        auto right = getConstant(mask->right);
         if (right == nullptr) {
             ::error(ErrorType::ERR_INVALID, "%1%: expression must evaluate to a constant", right);
             return Result::DontKnow;

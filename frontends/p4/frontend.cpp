@@ -54,6 +54,7 @@ limitations under the License.
 #include "simplify.h"
 #include "simplifyDefUse.h"
 #include "simplifyParsers.h"
+#include "simplifySwitch.h"
 #include "specialize.h"
 #include "specializeGenericFunctions.h"
 #include "specializeGenericTypes.h"
@@ -157,7 +158,7 @@ const IR::P4Program *FrontEnd::run(const CompilerOptions &options, const IR::P4P
         new DefaultArguments(&refMap, &typeMap),  // add default argument values to parameters
         new ResolveReferences(&refMap),
         new TypeInference(&refMap, &typeMap, false),  // more casts may be needed
-        new RemoveParserControlFlow(&refMap, &typeMap),
+        new RemoveParserIfs(&refMap, &typeMap),
         new StructInitializers(&refMap, &typeMap),
         new SpecializeGenericFunctions(&refMap, &typeMap),
         new TableKeyNames(&refMap, &typeMap),
@@ -178,6 +179,7 @@ const IR::P4Program *FrontEnd::run(const CompilerOptions &options, const IR::P4P
         new MoveInitializers(&refMap),
         new SideEffectOrdering(&refMap, &typeMap, skipSideEffectOrdering),
         new SimplifyControlFlow(&refMap, &typeMap),
+        new SimplifySwitch(&refMap, &typeMap),
         new MoveDeclarations(),  // Move all local declarations to the beginning
         new SimplifyDefUse(&refMap, &typeMap),
         new UniqueParameters(&refMap, &typeMap),
@@ -197,7 +199,7 @@ const IR::P4Program *FrontEnd::run(const CompilerOptions &options, const IR::P4P
         // Check for constants only after inlining
         new CheckConstants(&refMap, &typeMap),
         new SimplifyControlFlow(&refMap, &typeMap),
-        new RemoveParserControlFlow(&refMap, &typeMap),
+        new RemoveParserControlFlow(&refMap, &typeMap),  // more ifs may have been added to parsers
         new UniqueNames(&refMap),
         new LocalizeAllActions(&refMap),
         new UniqueNames(&refMap),  // needed again after inlining
