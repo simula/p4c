@@ -57,7 +57,7 @@ if (NOT $ENV{P4C_VERSION} STREQUAL "")
 else()
   # Semantic version numbering: <major>.<minor>.<patch>[-rcX]
   # Examples: 0.5.1, 1.0.0-rc1, 1.0.1-alpha
-  set (P4C_SEM_VERSION_STRING "1.2.0+git20210317211641~b0d58310")
+  set (P4C_SEM_VERSION_STRING "1.2.0+git20210318083351~b0d58310")
   string (REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)([-0-9a-z\\.]*).*"
     __p4c_version ${P4C_SEM_VERSION_STRING})
   set (P4C_VERSION_MAJOR ${CMAKE_MATCH_1})
@@ -192,6 +192,7 @@ add_cxx_compiler_option ("-Wall")
 add_cxx_compiler_option ("-Wextra")
 add_cxx_compiler_option ("-Wno-overloaded-virtual")
 add_cxx_compiler_option ("-Wno-deprecated")
+add_cxx_compiler_option ("-Wno-deprecated-declarations")
 
 # If we're on GCC, use the gold linker if available.
 if(CMAKE_COMPILER_IS_GNUCC)
