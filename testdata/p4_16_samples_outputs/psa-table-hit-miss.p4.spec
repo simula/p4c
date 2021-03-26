@@ -1,11 +1,5 @@
 
-struct ethernet_t {
-	bit<48> dstAddr
-	bit<48> srcAddr
-	bit<16> etherType
-}
-
-struct metadata_t {
+struct EMPTY_M {
 	bit<32> psa_ingress_parser_input_metadata_ingress_port
 	bit<32> psa_ingress_parser_input_metadata_packet_path
 	bit<32> psa_egress_parser_input_metadata_egress_port
@@ -32,34 +26,102 @@ struct metadata_t {
 	bit<16> psa_egress_output_metadata_clone_session_id
 	bit<8> psa_egress_output_metadata_drop
 }
-metadata instanceof metadata_t
+metadata instanceof EMPTY_M
 
-header ethernet instanceof ethernet_t
-
-action multicast args none {
-	mov m.psa_ingress_output_metadata_drop 0
-	cast  h.ethernet.dstAddr bit_32 m.psa_ingress_output_metadata_multicast_group
+action NoAction_0 args none {
 	return
 }
 
-table tbl_multicast {
-	actions {
-		multicast
+action remove_header args none {
+	invalidate h
+	return
+}
+
+action ifHit args none {
+	invalidate h
+	return
+}
+
+action ifHit_2 args none {
+	invalidate h
+	return
+}
+
+action ifMiss args none {
+	validate h
+	return
+}
+
+action ifMiss_2 args none {
+	validate h
+	return
+}
+
+table tbl_0 {
+	key {
+		h.srcAddr exact
 	}
-	default_action multicast args none 
+	actions {
+		NoAction_0
+		remove_header
+	}
+	default_action NoAction_0 args none 
+	size 0
+}
+
+
+table tbl_ifHit {
+	actions {
+		ifHit
+	}
+	default_action ifHit args none 
+	size 0
+}
+
+
+table tbl_ifMiss {
+	actions {
+		ifMiss
+	}
+	default_action ifMiss args none 
+	size 0
+}
+
+
+table tbl_ifMiss_0 {
+	actions {
+		ifMiss_2
+	}
+	default_action ifMiss_2 args none 
+	size 0
+}
+
+
+table tbl_ifHit_0 {
+	actions {
+		ifHit_2
+	}
+	default_action ifHit_2 args none 
 	size 0
 }
 
 
 apply {
 	rx m.psa_ingress_input_metadata_ingress_port
-	extract h.ethernet
-	table tbl_multicast
-	jmpnv LABEL_0FALSE h.ethernet
-	emit h.ethernet
-	LABEL_0FALSE :	jmpnv LABEL_1FALSE h.ethernet
-	emit h.ethernet
-	LABEL_1FALSE :	tx m.psa_ingress_output_metadata_egress_port
+	extract h
+	table tbl_0
+	jmpnh LABEL_0END
+	table tbl_ifHit
+	LABEL_0END :	table tbl_0
+	jmph LABEL_1END
+	table tbl_ifMiss
+	LABEL_1END :	table tbl_0
+	jmph LABEL_2END
+	table tbl_ifMiss_0
+	LABEL_2END :	table tbl_0
+	jmpnh LABEL_3END
+	table tbl_ifHit_0
+	LABEL_3END :	tx m.psa_ingress_output_metadata_egress_port
 }
 
 

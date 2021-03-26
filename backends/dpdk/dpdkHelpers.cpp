@@ -24,7 +24,7 @@ int ConvertStatementToDpdk::next_label_id = 0;
 bool ConvertStatementToDpdk::preorder(const IR::AssignmentStatement *a) {
     auto left = a->left;
     auto right = a->right;
-    IR::DpdkAsmStatement *i;
+    IR::DpdkAsmStatement *i = nullptr;
     // handle Binary Operation
     if (auto r = right->to<IR::Operation_Binary>()) {
         if (right->is<IR::Add>()) {
@@ -47,7 +47,6 @@ bool ConvertStatementToDpdk::preorder(const IR::AssignmentStatement *a) {
         }
     } else if (auto m = right->to<IR::MethodCallExpression>()) {
         auto mi = P4::MethodInstance::resolve(m, refmap, typemap);
-        // std::cerr << m << std::endl;
         if (auto e = mi->to<P4::ExternMethod>()) {
             if (e->originalExternType->getName().name == "Hash") {
                 if (e->expr->arguments->size() == 1) {
@@ -74,14 +73,12 @@ bool ConvertStatementToDpdk::preorder(const IR::AssignmentStatement *a) {
                         left, e->object->getName(), index);
                 }
             } else {
-                std::cerr << e->originalExternType->getName() << std::endl;
-                BUG("ExternMethod Not implemented");
+                BUG("%1% Not implemented", e->originalExternType->name);
             }
         } else if (auto b = mi->to<P4::BuiltInMethod>()) {
-            std::cerr << b->name.name << std::endl;
-            BUG("BuiltInMethod Not Implemented");
+            BUG("%1% Not Implemented", b->name);
         } else {
-            BUG("MethodInstance Not implemented");
+            BUG("%1% Not implemented", m);
         }
     } else if (right->is<IR::Operation_Unary>() && !right->is<IR::Member>()) {
         if (auto ca = right->to<IR::Cast>()) {
@@ -103,7 +100,8 @@ bool ConvertStatementToDpdk::preorder(const IR::AssignmentStatement *a) {
         std::cerr << right->node_type_name() << std::endl;
         BUG("Not implemented.");
     }
-    add_instr(i);
+    if (i)
+        add_instr(i);
     return false;
 }
 
@@ -235,35 +233,49 @@ bool BranchingInstructionGeneration::generate(const IR::Expression *expr,
         } else {
             BUG("%1%:not implemented method instance", expr);
         }
-    } else if (expr->is<IR::PathExpression>() || expr->is<IR::Member>()) {
+    } else if (auto path = expr->to<IR::PathExpression>()) {
         if (is_and) {
             instructions.push_back(new IR::DpdkJmpNotEqualStatement(
                         false_label, expr, new IR::Constant(1)));
         } else {
             instructions.push_back(new IR::DpdkJmpEqualStatement(
                         true_label, expr, new IR::Constant(1))); }
-        return is_and;
-    } else if (auto lnot = expr->to<IR::LNot>()) {
-        if (auto mce = lnot->expr->to<IR::MethodCallExpression>()) {
+    } else if (auto mem = expr->to<IR::Member>()) {
+        if (auto mce = mem->expr->to<IR::MethodCallExpression>()) {
             auto mi = P4::MethodInstance::resolve(mce, refMap, typeMap);
-            if (auto a = mi->to<P4::BuiltInMethod>()) {
-                if (a->name == IR::Type_Header::isValid) {
-                    if (is_and) {
-                        instructions.push_back(new IR::DpdkJmpIfValidStatement(
-                                    false_label, a->appliedTo));
-                    } else {
-                        instructions.push_back(new IR::DpdkJmpIfInvalidStatement(
-                                    true_label, a->appliedTo)); }
-                    return is_and;
+            if (auto a = mi->to<P4::ApplyMethod>()) {
+                if (a->isTableApply()) {
+                    if (mem->member == IR::Type_Table::hit) {
+                        instructions.push_back(
+                                new IR::DpdkApplyStatement(a->object->getName()));
+                        if (is_and) {
+                            instructions.push_back(
+                                    new IR::DpdkJmpMissStatement(false_label));
+                        } else {
+                            instructions.push_back(
+                                    new IR::DpdkJmpHitStatement(true_label));
+                        }
+                    }
                 } else {
-                    BUG("%1%: Not implemented", expr);
+                    BUG("%1%: not implemented.", expr);
                 }
             } else {
-                BUG("%1%: MethodInstance not implemented", expr);
+                BUG("%1%: not implemented.", expr);
             }
+        } else {
+            if (is_and) {
+                instructions.push_back(new IR::DpdkJmpNotEqualStatement(
+                            false_label, expr, new IR::Constant(1)));
+            } else {
+                instructions.push_back(new IR::DpdkJmpEqualStatement(
+                            true_label, expr, new IR::Constant(1))); }
         }
+        return is_and;
+    } else if (auto lnot = expr->to<IR::LNot>()) {
+        generate(lnot->expr, false_label, true_label, false);
+        return is_and;
     } else {
-        BUG("%1%: Not implemented", expr);
+        BUG("%1%: not implemented", expr);
     }
     return is_and;
 }
@@ -308,7 +320,6 @@ bool ConvertStatementToDpdk::preorder(const IR::MethodCallStatement *s) {
             BUG("not implemented for `apply` other than table");
         }
     } else if (auto a = mi->to<P4::ExternMethod>()) {
-        // std::cerr << a->originalExternType->getName() << std::endl;
         // Checksum function call
         if (a->originalExternType->getName().name == "InternetChecksum") {
             if (a->method->getName().name == "add") {
@@ -336,9 +347,12 @@ bool ConvertStatementToDpdk::preorder(const IR::MethodCallStatement *s) {
             if (a->method->getName().name == "emit") {
                 auto args = a->expr->arguments;
                 auto header = args->at(0);
+                auto false_label = Util::printf_format("label_%dfalse", next_label_id++);
                 if (header->expression->is<IR::Member>() ||
                     header->expression->is<IR::PathExpression>()) {
+                    add_instr(new IR::DpdkJmpIfInvalidStatement(false_label, header->expression));
                     add_instr(new IR::DpdkEmitStatement(header->expression));
+                    add_instr(new IR::DpdkLabelStatement(false_label));
                 } else {
                     ::error(
                         "One emit does not like this packet.emit(header.xxx)");
@@ -389,6 +403,8 @@ bool ConvertStatementToDpdk::preorder(const IR::MethodCallStatement *s) {
                 auto reg = a->object->getName();
                 add_instr(new IR::DpdkRegisterWriteStatement(reg, index, src));
             }
+        } else if (a->originalExternType->getName() == "DirectCounter") {
+            ::error("DirectCounter is not supported in DPDK yet, please use Counter instead.");
         } else {
             ::error("%1%: Unknown extern function.", s);
         }

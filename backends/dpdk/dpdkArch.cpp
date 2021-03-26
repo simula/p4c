@@ -418,8 +418,7 @@ const IR::Node *StatementUnroll::preorder(IR::AssignmentStatement *a) {
         code_block->push_back(a);
         return new IR::BlockStatement(*code_block);
     } else {
-        std::cerr << right->node_type_name() << std::endl;
-        BUG("not implemented");
+        BUG("%1% not implemented", a);
     }
     return a;
 }
@@ -573,6 +572,16 @@ bool LogicalExpressionUnroll::preorder(const IR::Operation_Unary *u) {
     // methodcall is converted to a dpdk branch instruction in a later pass.
     if (u->expr->is<IR::MethodCallExpression>())
         return false;
+
+    // if the expression is apply().hit or apply().miss, do not insert a temporary
+    // variable.
+    if (auto member = u->expr->to<IR::Member>()) {
+        if (member->expr->is<IR::MethodCallExpression>() &&
+            (member->member == IR::Type_Table::hit ||
+             member->member == IR::Type_Table::miss)) {
+            return false;
+        }
+    }
 
     root = u->clone();
     visit(u->expr);
