@@ -3,7 +3,7 @@ Upstream-Name: p4lang-pi
 Source: https://github.com/p4lang/p4c
 
 Files: *
-Copyright: 2016 Antonin BAS
+Copyright: Barefoot Networks
 License: Apache License 2.0
  A permissive license whose main conditions require preservation of copyright
  and license notices. Contributors provide an express grant of patent rights.
