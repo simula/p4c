@@ -1,9 +1,5 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-<<<<<<< HEAD
-Upstream-Name: p4lang-pi
-=======
 Upstream-Name: p4lang-p4c
->>>>>>> dreibh/debian-ubuntu-packaging
 Source: https://github.com/p4lang/p4c
 
 Files: *
