@@ -1,5 +1,5 @@
-p4c (1.2.0+g202104071322~3b0b48-1ppa1) unstable; urgency=medium
+p4c (1.2.0+g202104071351~4765e1-1ppa1) unstable; urgency=medium
 
   * Self-made package
 
- -- Thomas Dreibholz <dreibh@iem.uni-due.de>  Wed, 07 Apr 2021 15:22:24 +0200
+ -- Thomas Dreibholz <dreibh@iem.uni-due.de>  Wed, 07 Apr 2021 15:51:22 +0200
