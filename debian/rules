@@ -3,7 +3,7 @@
 DH_VERBOSE = 1
 
 %:
-	dh $@ --with python2,python3
+	dh $@ --with python3
 
 override_dh_auto_configure:
 	dh_auto_configure -- -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_INSTALL_PREFIX=/usr
